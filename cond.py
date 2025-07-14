@@ -1,6 +1,7 @@
 import bed_reader
 import zstandard as zstd
 import sys
+import numpy
 
 from scipy.stats import linregress
 
@@ -34,7 +35,8 @@ with zstd.open(qtl_path, 'r') as qtl_file:
 snps.sort(key = lambda x: x["P"])
 
 print("Selected", len(snps), "SNPs")
+print(bed.sid.index)
+snps_indices = [numpy.nonzero(bed.sid == snp["ID"])[0][0] for snp in snps]
 
-snps_indices = [bed.sid.index(snp["ID"]) for snp in snps]
-
-bed_data = bed.read(snps_indices)
+bed_data = bed.read_sparse(snps_indices)
+print(bed_data)

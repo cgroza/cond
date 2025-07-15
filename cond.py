@@ -93,7 +93,6 @@ for snp in snps:
     snp["BETA.J"] = snp_reg.slope.item()
     snp["SE.J"] = snp_reg.stderr.item()
     snp["order.J"] = snp_order
-    snp["sig.J"] = False
     snp_order += 1
 
     # remove effect of this SNP 

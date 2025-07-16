@@ -49,7 +49,7 @@ with zstd.open(qtl_path, 'r') as qtl_file:
         elif snp["#CHROM"] != cis_chrom and float(snp["P"]) < trans_pval:
             snps.append(snp)
 
-snps.sort(key = lambda x: x["P"])
+snps.sort(key = lambda x: float(x["P"]))
 
 # load genotypes
 snp_indices = [numpy.nonzero(bed.sid == snp["ID"])[0][0] for snp in snps]

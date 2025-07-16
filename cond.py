@@ -6,6 +6,8 @@ import pandas
 from sklearn import linear_model
 from scipy.stats import linregress
 import pdb
+import statsmodels.api as sm
+
 
 bed_path  = sys.argv[1]
 qtl_path  = sys.argv[2]
@@ -20,6 +22,10 @@ covar_path = sys.argv[7]
 cis_pval = 1.0e-6
 trans_pval = 1.0e-9
 
+pval_threshold = 7.7e-11
+
+if cis_chrom == chrom:
+    pval_threshold = 5.e-8
 
 bed = bed_reader.open_bed(bed_path)
 
@@ -71,31 +77,51 @@ df.sort_values(by='IID', inplace=True)
 df = df.assign(pheno=pheno_values)
 df['pheno'] = pandas.to_numeric(df['pheno'], errors='coerce')
 
-df.dropna(inplace=True)
 
-# remove effect of covariates
-covar_reg = linear_model.LinearRegression()
-covar_reg.fit(df.iloc[:, 2:22], df['pheno'])
+pheno_geno_df = pandas.merge(df, bed_data, on='IID', how='inner')
 
-df = df.assign(pheno_corrected = df['pheno'] - covar_reg.predict(df.iloc[:, 2:22]))
+sig_snps = snps.copy()
 
-pheno_geno_df = pandas.merge(df.loc[:, ["IID", "pheno_corrected"]], bed_data, on='IID', how='inner')
+covariates = ["Sex.1.Male.2.Female","Age","PC1","PC2","PC3","PC4",
+              "PC5","PC6","PC7","PC8","PC9","PC10","PC11","PC12",
+              "PC13","PC14","PC15","PC16","PC17","PC18","PC19","PC20"]
 
+output_snps = []
 
-# iterate through snps and condition
-snp_order = 0
-for snp in snps:
-    # skip other chromosomes
-    if snp['#CHROM'] != chrom:
-        continue
-    snp_reg = linregress(pheno_geno_df[snp['ID']], pheno_geno_df['pheno_corrected'], alternative='two-sided')
-    snp["p.J"] = snp_reg.pvalue.item()
-    snp["BETA.J"] = snp_reg.slope.item()
-    snp["SE.J"] = snp_reg.stderr.item()
-    snp["order.J"] = snp_order
-    snp_order += 1
+while sig_snps:
+    top_snp = sig_snps[0]
+    if 'COND.J' not in top_snp:
+        top_snp['SE_J']  = top_snp["SE"]
+        top_snp['BETA_J']  = top_snp["BETA"]
+        top_snp['P_J']  = top_snp["P"]
+        top_snp['COND_J']  = "."
 
-    # remove effect of this SNP 
-    pheno_geno_df['pheno_corrected'] = pheno_geno_df['pheno_corrected'] - snp_reg.slope * pheno_geno_df[snp['ID']] + snp_reg.intercept
+    output_snps.append(top_snp)
 
-pandas.DataFrame.from_dict(snps).to_csv(sys.stdout, index=False, sep = "\t")
+    new_sig_snps = []
+
+    for snp in sig_snps[1:]:
+        # don't condition on SNPs that are more than 10 MBp away
+        if abs(int(snp['POS']) - int(top_snp['POS'])) > 1e7:
+            new_sig_snps.append(snp)
+            continue
+
+    # regress conditioning on the top SNP
+        X = pheno_geno_df.loc[:, ['pheno', top_snp['ID'], snp['ID']] + covariates]
+        X.dropna(inplace=True)
+
+        model = sm.OLS(X['pheno'], X.loc[:, [top_snp['ID'], snp['ID']] + covariates]).fit()
+
+        snp["SE_J"] = model.bse[snp['ID']]
+        snp["BETA_J"] = model.params[snp['ID']]
+        snp["P_J"] = model.pvalues[snp['ID']]
+        snp["COND_J"] = top_snp['ID']
+
+        output_snps.append(snp)
+
+        if model.pvalues[snp['ID']] < pval_threshold:
+            new_sig_snps.append(snp)
+
+    sig_snps = new_sig_snps
+
+pandas.DataFrame.from_dict(output_snps).to_csv(sys.stdout, index=False, sep = "\t")

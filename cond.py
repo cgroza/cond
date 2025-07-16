@@ -117,10 +117,11 @@ while sig_snps:
         snp["P_J"] = model.pvalues[snp['ID']]
         snp["COND_J"] = top_snp['ID']
 
-        output_snps.append(snp)
 
         if model.pvalues[snp['ID']] < pval_threshold:
             new_sig_snps.append(snp)
+        else:
+            output_snps.append(snp)
 
     sig_snps = new_sig_snps
 

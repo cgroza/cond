@@ -124,5 +124,7 @@ while sig_snps:
             output_snps.append(snp)
 
     sig_snps = new_sig_snps
+    # resort by adjusted P-value
+    sig_snps.sort(key = lambda x: float(x["P_J"]))
 
 pandas.DataFrame.from_dict(output_snps).to_csv(sys.stdout, index=False, sep = "\t")

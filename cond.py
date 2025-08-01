@@ -90,7 +90,7 @@ output_snps = []
 
 while sig_snps:
     top_snp = sig_snps[0]
-    if 'COND.J' not in top_snp:
+    if 'COND_J' not in top_snp:
         top_snp['SE_J']  = top_snp["SE"]
         top_snp['BETA_J']  = top_snp["BETA"]
         top_snp['P_J']  = top_snp["P"]

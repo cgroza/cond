@@ -103,10 +103,11 @@ while sig_snps:
     for snp in sig_snps[1:]:
         # don't condition on SNPs that are more than 10 MBp away
         if abs(int(snp['POS']) - int(top_snp['POS'])) > 1e7:
-            snp['SE_J']  = snp["SE"]
-            snp['BETA_J']  = snp["BETA"]
-            snp['P_J'] = snp['P']
-            snp['COND_J']  = "."
+            if 'COND_J' not in snp:
+                snp['SE_J']  = snp["SE"]
+                snp['BETA_J']  = snp["BETA"]
+                snp['P_J'] = snp['P']
+                snp['COND_J']  = "."
             new_sig_snps.append(snp)
             continue
 

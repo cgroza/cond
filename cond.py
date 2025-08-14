@@ -4,8 +4,8 @@ import sys
 import numpy
 import pandas
 from sklearn import linear_model
+from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import linregress
-import pdb
 import statsmodels.api as sm
 
 
@@ -91,10 +91,11 @@ output_snps = []
 while sig_snps:
     top_snp = sig_snps[0]
     if 'COND_J' not in top_snp:
-        top_snp['SE_J']  = top_snp["SE"]
-        top_snp['BETA_J']  = top_snp["BETA"]
-        top_snp['P_J']  = top_snp["P"]
-        top_snp['COND_J']  = "."
+        top_snp['SE_J']  = top_snp['SE']
+        top_snp['BETA_J']  = top_snp['BETA']
+        top_snp['P_J']  = top_snp['P']
+        top_snp['COND_J']  = '.'
+        top_snp['COS_J']  = '.'
 
     output_snps.append(top_snp.copy())
 
@@ -104,24 +105,33 @@ while sig_snps:
         # don't condition on SNPs that are more than 10 MBp away
         if abs(int(snp['POS']) - int(top_snp['POS'])) > 1e7:
             if 'COND_J' not in snp:
-                snp['SE_J']  = snp["SE"]
-                snp['BETA_J']  = snp["BETA"]
+                snp['SE_J']  = snp['SE']
+                snp['BETA_J']  = snp['BETA']
                 snp['P_J'] = snp['P']
                 snp['COND_J']  = "."
+                snp['COS_J']  = "."
             new_sig_snps.append(snp)
             continue
 
-    # regress conditioning on the top SNP
+        # skip SNPs that are colinear
+        similarity = cosine_similarity(pheno_geno_df.loc[:, top_snp['ID']].values.reshape(1, -1),
+                                       pheno_geno_df.loc[:, snp['ID']].values.reshape(1, -1))[0][0]
+        if similarity > 0.99:
+            continue
+
+        # regress conditioning on the top SNP
         X = pheno_geno_df.loc[:, ['pheno', top_snp['ID'], snp['ID']] + covariates]
         X.dropna(inplace=True)
 
         model = sm.OLS(X['pheno'], X.loc[:, [top_snp['ID'], snp['ID']] + covariates]).fit()
 
-        snp["SE_J"] = model.bse[snp['ID']]
-        snp["BETA_J"] = model.params[snp['ID']]
-        snp["P_J"] = model.pvalues[snp['ID']]
-        snp["COND_J"] = top_snp['ID']
+        snp = snp.copy()
 
+        snp['SE_J'] = model.bse[snp['ID']]
+        snp['BETA_J'] = model.params[snp['ID']]
+        snp['P_J'] = model.pvalues[snp['ID']]
+        snp['COND_J'] = top_snp['ID']
+        snp['COS_J'] = similarity
 
         if model.pvalues[snp['ID']] < pval_threshold:
             new_sig_snps.append(snp)

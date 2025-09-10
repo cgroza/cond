@@ -19,13 +19,14 @@ pheno_path = sys.argv[6]
 
 covar_path = sys.argv[7]
 
-cis_pval = 1.0e-6
-trans_pval = 1.0e-9
+cis_pval = 1.0e-3
+trans_pval = 1.0e-6
 
 pval_threshold = 7.7e-11
 
 if cis_chrom == chrom:
-    pval_threshold = 5.e-8
+    # pval_threshold = 5.e-8
+    pval_threshold = 1.0e-3
 
 bed = bed_reader.open_bed(bed_path)
 

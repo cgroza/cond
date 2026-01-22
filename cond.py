@@ -13,20 +13,22 @@ bed_path  = sys.argv[1]
 qtl_path  = sys.argv[2]
 chrom     = sys.argv[3]
 cis_chrom = sys.argv[4]
+gene_start = sys.argv[5]
+gene_end = sys.argv[6]
 
 pheno = sys.argv[5]
 pheno_path = sys.argv[6]
 
 covar_path = sys.argv[7]
 
-cis_pval = 1.0e-3
-trans_pval = 1.0e-6
+cis_pval = 5e-8
+trans_pval = 7.7e-11
 
 pval_threshold = 7.7e-11
 
 if cis_chrom == chrom:
-    # pval_threshold = 5.e-8
-    pval_threshold = 1.0e-3
+    pval_threshold = 5e-8
+    #pval_threshold = 1.0e-3
 
 bed = bed_reader.open_bed(bed_path)
 
@@ -44,10 +46,11 @@ with zstd.open(qtl_path, 'r') as qtl_file:
         if snp["P"] == "NA":
             continue
 
-        if snp["#CHROM"] == cis_chrom and float(snp["P"]) < cis_pval:
+        gene_dist = min(abs(int(snp["POS"]) - int(gene_start)), abs(int(snp["POS"]) - int(gene_end)))
+        if snp["#CHROM"] == cis_chrom and gene_dist < 1e6 and float(snp["P"]) < cis_pval:
             snps.append(snp)
 
-        elif snp["#CHROM"] != cis_chrom and float(snp["P"]) < trans_pval:
+        elif float(snp["P"]) < trans_pval:
             snps.append(snp)
 
 snps.sort(key = lambda x: float(x["P"]))

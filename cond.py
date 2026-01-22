@@ -13,13 +13,14 @@ bed_path  = sys.argv[1]
 qtl_path  = sys.argv[2]
 chrom     = sys.argv[3]
 cis_chrom = sys.argv[4]
-gene_start = sys.argv[5]
-gene_end = sys.argv[6]
 
 pheno = sys.argv[5]
 pheno_path = sys.argv[6]
 
 covar_path = sys.argv[7]
+
+gene_start = sys.argv[8]
+gene_end = sys.argv[9]
 
 cis_pval = 5e-8
 trans_pval = 7.7e-11
